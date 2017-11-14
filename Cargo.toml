@@ -5,4 +5,3 @@ authors = ["Luan Santos <cfcluan@gmail.com>"]
 
 [dependencies]
 rand = "0.3"
-
