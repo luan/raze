@@ -1,0 +1,6 @@
+[package]
+name = "raze"
+version = "0.1.0"
+authors = ["Luan Santos <cfcluan@gmail.com>"]
+
+[dependencies]
