@@ -4,19 +4,72 @@ use std::env;
 use std::collections::HashSet;
 use rand::Rng;
 
+struct Point(i32, i32);
+
+impl Point {
+    fn add(&self, direction: Direction) -> Point {
+        let diff = direction.diff();
+        Point(self.0 + diff.0, self.1 + diff.1)
+    }
+}
+
 struct Tile {
     tile: char,
     walkable: bool,
 }
 
 struct Maze {
+    height: i32,
+    width: i32,
     tiles: Vec<Vec<Tile>>,
+}
+
+impl Maze {
+    fn wall_at(&self, point: Point) -> bool {
+        point.0 >= 0 && point.1 >= 0 && point.0 < self.width && point.1 < self.height
+            && !self.tiles[point.1 as usize][point.0 as usize].walkable
+    }
+}
+
+#[derive(Copy, Clone)]
+enum Direction {
+    North,
+    South,
+    East,
+    West,
+}
+
+static DIRECTIONS: [Direction; 4] = [
+    Direction::North,
+    Direction::South,
+    Direction::East,
+    Direction::West,
+];
+
+impl Direction {
+    fn pick() -> Direction {
+        let side = rand::thread_rng().gen_range(0, DIRECTIONS.len());
+        DIRECTIONS[side]
+    }
+
+    fn diff(&self) -> (i32, i32) {
+        match self {
+            &Direction::North => (0, -1),
+            &Direction::South => (0, 1),
+            &Direction::East => (1, 0),
+            &Direction::West => (-1, 0),
+        }
+    }
 }
 
 impl Maze {
     fn gen(width: i32, height: i32) -> Maze {
         let mut tile_sets = Vec::new();
-        let mut maze = Maze { tiles: Vec::new() };
+        let mut maze = Maze {
+            tiles: Vec::new(),
+            height: height * 2 + 1,
+            width: width * 2 + 1,
+        };
         let max_point = width * height;
 
         for y in 0..(2 * height + 1) {
@@ -42,13 +95,10 @@ impl Maze {
             }
         }
 
-        let directions = [(-1, 0), (1, 0), (0, -1), (0, 1)];
-
         while tile_sets.len() > 1 {
             let a = rand::thread_rng().gen_range(0, max_point);
-            let side = rand::thread_rng().gen_range(0, 3);
 
-            let (diff_x, diff_y) = directions[side];
+            let (diff_x, diff_y) = Direction::pick().diff();
             let (x_a, y_a) = (a % width, a / width);
             let (x_b, y_b) = (x_a + diff_x, y_a + diff_y);
             if x_b < 0 || x_b >= width || y_b < 0 || y_b >= height {
@@ -80,38 +130,34 @@ impl Maze {
             }
         }
 
-        let two: i32 = 2;
         for y in 0..maze.tiles.len() {
             for x in 0..maze.tiles[y].len() {
                 if !maze.tiles[y][x].walkable {
-                    let mut walls = 0;
-                    for (i, &(xdiff, ydiff)) in directions.iter().enumerate() {
-                        let (oy, ox) = (y as i32 + ydiff, x as i32 + xdiff);
-                        if oy < 0 || oy >= 2 * height + 1 || ox < 0 || ox >= 2 * width + 1 {
-                            continue;
-                        }
-                        if !maze.tiles[oy as usize][ox as usize].walkable {
-                            walls += two.pow(i as u32);
-                        }
-                    }
+                    let point = Point(x as i32, y as i32);
+                    let walls = (
+                        maze.wall_at(point.add(Direction::North)),
+                        maze.wall_at(point.add(Direction::South)),
+                        maze.wall_at(point.add(Direction::East)),
+                        maze.wall_at(point.add(Direction::West)),
+                    );
 
                     maze.tiles[y][x].tile = match walls {
-                        1 => '╸',
-                        2 => '╺',
-                        3 => '━',
-                        4 => '╹',
-                        5 => '┛',
-                        6 => '┗',
-                        7 => '┻',
-                        8 => '╻',
-                        9 => '┓',
-                        10 => '┏',
-                        11 => '┳',
-                        12 => '┃',
-                        13 => '┫',
-                        14 => '┣',
-                        15 => '╋',
-                        _ => '#',
+                        (false, false, false, false) => 'E',
+                        (false, false, false, true) => '╸',
+                        (false, false, true, false) => '╺',
+                        (false, false, true, true) => '━',
+                        (false, true, false, false) => '╻',
+                        (false, true, false, true) => '┓',
+                        (false, true, true, false) => '┏',
+                        (false, true, true, true) => '┳',
+                        (true, false, false, false) => '╹',
+                        (true, false, false, true) => '┛',
+                        (true, false, true, false) => '┗',
+                        (true, false, true, true) => '┻',
+                        (true, true, false, false) => '┃',
+                        (true, true, false, true) => '┫',
+                        (true, true, true, false) => '┣',
+                        (true, true, true, true) => '╋',
                     }
                 }
             }
