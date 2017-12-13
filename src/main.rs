@@ -1,9 +1,36 @@
 extern crate rand;
 
 use std::env;
-use std::collections::HashSet;
-use rand::Rng;
 
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let (width, height): (i32, i32) = if args.len() >= 3 {
+        (
+            match args[1].parse() {
+                Ok(n) => n,
+                Err(_) => 5,
+            },
+            match args[2].parse() {
+                Ok(n) => n,
+                Err(_) => 5,
+            },
+        )
+    } else {
+        (5, 5)
+    };
+
+    let maze = Maze::gen(width, height);
+
+    for row in maze.tiles {
+        for c in row {
+            print!("{}", c.tile);
+        }
+        println!();
+    }
+}
+
+// Point {{{
 struct Point(i32, i32);
 
 impl Point {
@@ -12,25 +39,9 @@ impl Point {
         Point(self.0 + diff.0, self.1 + diff.1)
     }
 }
+// }}} Point
 
-struct Tile {
-    tile: char,
-    walkable: bool,
-}
-
-struct Maze {
-    height: i32,
-    width: i32,
-    tiles: Vec<Vec<Tile>>,
-}
-
-impl Maze {
-    fn wall_at(&self, point: Point) -> bool {
-        point.0 >= 0 && point.1 >= 0 && point.0 < self.width && point.1 < self.height
-            && !self.tiles[point.1 as usize][point.0 as usize].walkable
-    }
-}
-
+// {{{ Direction
 #[derive(Copy, Clone)]
 enum Direction {
     North,
@@ -61,8 +72,29 @@ impl Direction {
         }
     }
 }
+// }}} Direction
+
+// Maze {{{
+use std::collections::HashSet;
+use rand::Rng;
+
+struct Tile {
+    tile: char,
+    walkable: bool,
+}
+
+struct Maze {
+    height: i32,
+    width: i32,
+    tiles: Vec<Vec<Tile>>,
+}
 
 impl Maze {
+    fn wall_at(&self, point: Point) -> bool {
+        point.0 >= 0 && point.1 >= 0 && point.0 < self.width && point.1 < self.height
+            && !self.tiles[point.1 as usize][point.0 as usize].walkable
+    }
+
     fn gen(width: i32, height: i32) -> Maze {
         let mut tile_sets = Vec::new();
         let mut maze = Maze {
@@ -178,31 +210,4 @@ impl Maze {
         maze
     }
 }
-
-fn main() {
-    let args: Vec<String> = env::args().collect();
-
-    let (width, height): (i32, i32) = if args.len() >= 3 {
-        (
-            match args[1].parse() {
-                Ok(n) => n,
-                Err(_) => 5,
-            },
-            match args[2].parse() {
-                Ok(n) => n,
-                Err(_) => 5,
-            },
-        )
-    } else {
-        (5, 5)
-    };
-
-    let maze = Maze::gen(width, height);
-
-    for row in maze.tiles {
-        for c in row {
-            print!("{}", c.tile);
-        }
-        println!();
-    }
-}
+// }}} Maze
