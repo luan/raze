@@ -2,7 +2,8 @@ use rand::{thread_rng, Rng};
 use std::collections::HashSet;
 use direction::Direction;
 
-struct Point(i32, i32);
+#[derive(PartialEq)]
+pub struct Point(pub i32, pub i32);
 
 impl Point {
     fn add(&self, direction: Direction) -> Point {
@@ -20,19 +21,32 @@ pub struct Tile {
 pub struct Maze {
     pub tiles: Vec<Vec<Tile>>,
 
-    height: i32,
-    width: i32,
+    pub height: i32,
+    pub width: i32,
+
+    pub player_pos: Point,
+    pub goal_pos: Point,
 }
 
 impl Maze {
     pub fn gen(width: i32, height: i32) -> Maze {
         let mut tile_sets = Vec::new();
+        let max_point = width * height;
+
+        let start = thread_rng().gen_range(0, max_point);
+        let (start_x, start_y) = (start % width, start / width);
+
+        let goal = thread_rng().gen_range(0, max_point);
+        let (goal_x, goal_y) = (goal % width, goal / width);
+
+
         let mut maze = Maze {
             tiles: Vec::new(),
             height: height * 2 + 1,
             width: width * 2 + 1,
+            player_pos: Point(start_x * 2 + 1, start_y * 2 + 1),
+            goal_pos: Point(goal_x * 2 + 1, goal_y * 2 + 1),
         };
-        let max_point = width * height;
 
         for y in 0..(2 * height + 1) {
             maze.tiles.push(Vec::new());
@@ -97,10 +111,10 @@ impl Maze {
                 if !maze.tiles[y][x].walkable {
                     let point = Point(x as i32, y as i32);
                     let walls = (
-                        maze.wall_at(point.add(Direction::North)),
-                        maze.wall_at(point.add(Direction::South)),
-                        maze.wall_at(point.add(Direction::East)),
-                        maze.wall_at(point.add(Direction::West)),
+                        maze.wall_at(&point.add(Direction::North)),
+                        maze.wall_at(&point.add(Direction::South)),
+                        maze.wall_at(&point.add(Direction::East)),
+                        maze.wall_at(&point.add(Direction::West)),
                     );
 
                     maze.tiles[y][x].tile = match walls {
@@ -125,23 +139,18 @@ impl Maze {
             }
         }
 
-        let goal = thread_rng().gen_range(0, max_point);
-        let (goal_x, goal_y) = (goal % width, goal / width);
-        let goal_x = goal_x * 2 + 1;
-        let goal_y = goal_y * 2 + 1;
-        maze.tiles[goal_y as usize][goal_x as usize].tile = '⚑';
-
-        let start = thread_rng().gen_range(0, max_point);
-        let (start_x, start_y) = (start % width, start / width);
-        let start_x = start_x * 2 + 1;
-        let start_y = start_y * 2 + 1;
-        maze.tiles[start_y as usize][start_x as usize].tile = '⚉';
-
         maze
     }
 
-    fn wall_at(&self, point: Point) -> bool {
+    fn wall_at(&self, point: &Point) -> bool {
         point.0 >= 0 && point.1 >= 0 && point.0 < self.width && point.1 < self.height
             && !self.tiles[point.1 as usize][point.0 as usize].walkable
+    }
+
+    pub fn walk(&mut self, direction: Direction) {
+        let pos = self.player_pos.add(direction);
+        if !self.wall_at(&pos) {
+            self.player_pos = pos;
+        }
     }
 }
